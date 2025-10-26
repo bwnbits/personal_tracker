@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add this line
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Standalone function to launch a URL.
 Future<void> _launchUrl(String url) async {
@@ -31,6 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadCustomColors();
   }
 
+  // Loads custom color state from SharedPreferences
   Future<void> _loadCustomColors() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
@@ -54,8 +55,8 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Text('Abhishek Ruhela', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            Text('Email: abhishek@example.com'),
-            Text('Phone: +91 98765 43210'),
+            Text('Email: abhishekruhela@duck.com'), // Updated Email
+            Text('Phone: xxxxxxxxxx'), // Updated Phone
           ],
         ),
         actions: [
@@ -102,6 +103,25 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 20),
 
+              // --- Font Section ---
+              const Text('Font', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(
+                elevation: 2,
+                child: Column(
+                  children: ThemeProvider.fontMap.keys.map((fontName) {
+                    return RadioListTile<String>(
+                      title: Text(fontName, style: TextStyle(fontFamily: ThemeProvider.fontMap[fontName])),
+                      value: fontName,
+                      groupValue: themeProvider.fontFamily,
+                      onChanged: (newValue) => themeProvider.setFontFamily(newValue!),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+
               // --- NEW CUSTOM THEME SLIDER SECTION ---
               const Text('Custom Theme', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
@@ -111,6 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
+                      // Sliders for RGB values
                       _buildColorSlider('Red', Colors.red, _red, (value) => setState(() => _red = value)),
                       _buildColorSlider('Green', Colors.green, _green, (value) => setState(() => _green = value)),
                       _buildColorSlider('Blue', Colors.blue, _blue, (value) => setState(() => _blue = value)),
@@ -129,7 +150,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           const SizedBox(width: 20),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () => themeProvider.setCustomTheme(_red.toInt(), _green.toInt(), _blue.toInt()),
+                              onPressed: () {
+                                themeProvider.setCustomTheme(_red.toInt(), _green.toInt(), _blue.toInt());
+                              },
                               child: const Text('Apply Custom Theme'),
                             ),
                           ),

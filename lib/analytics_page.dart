@@ -17,28 +17,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   String _selectedGraphType = 'line';
   int _totalTasksInPeriod = 0;
   int _completedTasksInPeriod = 0;
-  int _pendingTasksInPeriod = 0; // NEW: Added a variable for pending tasks
+  int _pendingTasksInPeriod = 0;
   double _completionPercentage = 0.0;
   List<FlSpot> _chartDataCompleted = [];
   List<FlSpot> _chartDataPending = [];
 
+  late Future<void> _refreshFuture;
+
   @override
   void initState() {
     super.initState();
-    _loadTasksAndAnalytics();
+    _refreshFuture = _loadTasksAndAnalytics();
   }
 
-  // This method ensures the data is reloaded every time you switch to this page.
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadTasksAndAnalytics();
+    // Re-fetch data if dependencies change (like navigating back to the page)
+    _refreshFuture = _loadTasksAndAnalytics();
   }
 
   Future<void> _loadTasksAndAnalytics() async {
     final prefs = await SharedPreferences.getInstance();
     final savedHistory = prefs.getStringList('tasks_history') ?? [];
-    // NEW: Also load tasks that are currently pending.
     final savedPending = prefs.getStringList('tasks') ?? [];
 
     final history = savedHistory.map((e) => Task.fromJson(jsonDecode(e))).toList();
@@ -46,7 +47,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     if (mounted) {
       setState(() {
-        _tasksHistory = history + pending; // Combine all tasks for analysis
+        _tasksHistory = history + pending;
         _calculateAnalytics();
       });
     }
@@ -57,6 +58,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     _chartDataPending.clear();
     _totalTasksInPeriod = 0;
     _completedTasksInPeriod = 0;
+    _pendingTasksInPeriod = 0;
 
     final now = DateTime.now();
     List<Task> relevantTasks = [];
@@ -110,50 +112,148 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       return const Center(child: Text('No data for this period.'));
     }
 
-    final maxY = _totalTasksInPeriod > 0 ? _totalTasksInPeriod.toDouble() : 100.0;
+    final maxY = _totalTasksInPeriod > 0 ? (_totalTasksInPeriod.toDouble() + 1) : 10.0;
 
     if (_selectedGraphType == 'line') {
       return LineChart(
         LineChartData(
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              // The API for this is complex in older versions, but this basic structure should be fine.
+              getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                return touchedSpots.map((LineBarSpot touchedSpot) {
+                  return LineTooltipItem(
+                      '${touchedSpot.barIndex == 0 ? 'Completed' : 'Pending'}: ${touchedSpot.y.toInt()}',
+                      const TextStyle(color: Colors.white)
+                  );
+                }).toList();
+              },
+            ),
+          ),
           lineBarsData: [
+            // Completed tasks line
             LineChartBarData(
               spots: _chartDataCompleted,
               isCurved: true,
-              color: Colors.green, // Completed tasks
+              color: Colors.green, // Completed tasks are green
               barWidth: 3,
               isStrokeCapRound: true,
               belowBarData: BarAreaData(show: false),
             ),
+            // Pending tasks line
             LineChartBarData(
               spots: _chartDataPending,
               isCurved: true,
-              color: Colors.red, // Pending tasks
+              color: Colors.red, // Pending tasks are red
               barWidth: 3,
               isStrokeCapRound: true,
               belowBarData: BarAreaData(show: false),
             ),
           ],
-          titlesData: const FlTitlesData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true, reservedSize: 30),
+              axisNameWidget: const Text('Task Count'),
+              axisNameSize: 20,
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22, // <-- Increased from 20 to 22
+                interval: _selectedTimeframe == '1day' ? 3 : (_selectedTimeframe == '7day' ? 1 : 5),
+                getTitlesWidget: (value, meta) {
+                  return SideTitleWidget(
+                    meta: meta,
+                    child: Text(_getXAxisLabel(value, _chartDataCompleted.length)),
+                  );
+                },
+              ),
+              axisNameWidget: const Padding(
+                padding: EdgeInsets.only(top: 8.0), // <-- Added padding
+                child: Text('Time Period'),
+              ),
+              axisNameSize: 30, // <-- Increased from 20 to 30 for the padding
+            ),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
           borderData: FlBorderData(show: false),
-          gridData: const FlGridData(show: false),
-          minX: 0, maxX: _chartDataCompleted.length.toDouble() - 1, minY: 0, maxY: maxY,
+          gridData: const FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1),
+          minX: 0, maxX: (_chartDataCompleted.length - 1).toDouble(), minY: 0, maxY: maxY,
         ),
       );
     } else { // Scatter plot
       return ScatterChart(
         ScatterChartData(
           scatterSpots: [
-            ..._chartDataCompleted.map((spot) => ScatterSpot(spot.x, spot.y)).toList(),
-            ..._chartDataPending.map((spot) => ScatterSpot(spot.x, spot.y)).toList(),
+            ..._chartDataCompleted.map((spot) => ScatterSpot(
+              spot.x,
+              //
+              // ** THIS IS THE FIX **
+              //
+              spot.y, // <-- Changed from spot.Y to spot.y
+              //
+              // ** END OF FIX **
+              //
+              dotPainter: FlDotCirclePainter(
+                radius: 6,
+                color: Colors.green,
+                strokeWidth: 0,
+              ),
+            )).toList(),
+            ..._chartDataPending.map((spot) => ScatterSpot(
+              spot.x,
+              spot.y,
+              dotPainter: FlDotCirclePainter(
+                radius: 6,
+                color: Colors.red,
+                strokeWidth: 0,
+              ),
+            )).toList(),
           ],
-          minX: 0, maxX: _chartDataCompleted.length.toDouble() - 1, minY: 0, maxY: maxY,
-          scatterTouchData: ScatterTouchData(enabled: false),
+          minX: 0, maxX: (_chartDataCompleted.length - 1).toDouble(), minY: 0, maxY: maxY,
+          scatterTouchData: ScatterTouchData(enabled: true),
           borderData: FlBorderData(show: false),
           gridData: const FlGridData(show: false),
-          titlesData: const FlTitlesData(show: false),
+          titlesData: FlTitlesData(show: false),
         ),
       );
     }
+  }
+
+  String _getXAxisLabel(double value, int totalPoints) {
+    int index = value.toInt();
+    if (totalPoints <= 0) return ''; // Guard against empty data
+
+    if (_selectedTimeframe == '1day') {
+      return '${index}:00';
+    } else if (_selectedTimeframe == '7day') {
+      // Ensure index is within bounds
+      if (index < 0 || index >= totalPoints) return '';
+      DateTime date = DateTime.now().subtract(Duration(days: totalPoints - 1 - index));
+      return '${date.day}';
+    } else {
+      // Ensure index is within bounds
+      if (index < 0 || index >= totalPoints) return '';
+      DateTime date = DateTime.now().subtract(Duration(days: totalPoints - 1 - index));
+      return '${date.day}';
+    }
+  }
+
+  // A separate widget for the legend
+  Widget _buildLegend() {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.circle, color: Colors.green, size: 12),
+        SizedBox(width: 4),
+        Text('Completed'),
+        SizedBox(width: 16),
+        Icon(Icons.circle, color: Colors.red, size: 12),
+        SizedBox(width: 4),
+        Text('Pending'),
+      ],
+    );
   }
 
   Widget _buildTimeframeButtons() {
@@ -172,7 +272,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           } else {
             _selectedTimeframe = '30day';
           }
-          _loadTasksAndAnalytics();
+          // When a button is pressed, re-run the future
+          _refreshFuture = _loadTasksAndAnalytics();
         });
       },
       borderRadius: BorderRadius.circular(20),
@@ -237,25 +338,43 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       appBar: AppBar(
         title: const Text('Analytics'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildTimeframeButtons(),
-                _buildGraphTypeButtons(),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 200,
-              child: _buildGraph(),
-            ),
-            _buildNumericSummary(),
-          ],
-        ),
+      body: FutureBuilder(
+        future: _refreshFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            // Data is loaded, build the UI
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: <Widget>[
+                  // NEW: Micro description
+                  Text('Your productivity trend over the last $_selectedTimeframe.',
+                      style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildTimeframeButtons(),
+                      _buildGraphTypeButtons(),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 200,
+                    child: _buildGraph(),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildLegend(), // NEW: Graph legend
+                  _buildNumericSummary(),
+                ],
+              ),
+            );
+          }
+        },
       ),
     );
   }

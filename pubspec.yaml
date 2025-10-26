@@ -18,7 +18,8 @@ dependencies:
 
   provider: ^6.1.2
 
-  fl_chart: ^0.68.0
+  # FIX: Updated to a newer version to match the code features
+  fl_chart: ^1.1.1
   url_launcher: ^6.3.0
 
 dev_dependencies:
@@ -41,4 +42,3 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
-
