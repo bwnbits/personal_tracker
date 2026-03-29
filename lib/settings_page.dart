@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'theme_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'netpulse/network_speed_service.dart';
 
-// Standalone function to launch a URL.
 Future<void> _launchUrl(String url) async {
   final Uri uri = Uri.parse(url);
   if (!await launchUrl(uri)) {
@@ -20,18 +20,20 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // State for the custom color sliders
   double _red = 0;
   double _green = 0;
   double _blue = 0;
+
+  bool _netPulseEnabled = false;
+  final _netService = NetworkSpeedService();
 
   @override
   void initState() {
     super.initState();
     _loadCustomColors();
+    _loadNetPulseState();
   }
 
-  // Loads custom color state from SharedPreferences
   Future<void> _loadCustomColors() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
@@ -43,20 +45,47 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // A new method to show the contact details modal.
+  Future<void> _loadNetPulseState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _netPulseEnabled = prefs.getBool('netpulse_enabled') ?? false;
+      });
+    }
+  }
+
+  // ✅ UPDATED CONTACT MODAL
   void _showContactDetails(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Contact Details'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Abhishek Ruhela', style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Email: abhishekruhela@duck.com'), // Updated Email
-            Text('Phone: xxxxxxxxxx'), // Updated Phone
+            const Text('Abhishek Ruhela', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Email: abhishekruhela@duck.com'),
+            const SizedBox(height: 8),
+
+            GestureDetector(
+              onTap: () => _launchUrl('https://linkedin.com/in/abhishekruhela'),
+              child: const Text(
+                'LinkedIn: linkedin.com/in/abhishekruhela',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            GestureDetector(
+              onTap: () => _launchUrl('https://github.com/bwnbits'),
+              child: const Text(
+                'GitHub: github.com/bwnbits',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -74,40 +103,36 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // --- Theme Section ---
+            children: [
+
               const Text('Appearance', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
-                elevation: 2,
                 child: Column(
                   children: [
                     _buildThemeRadioTile('System Default', 'system', themeProvider),
                     _buildThemeRadioTile('Light', 'light', themeProvider),
                     _buildThemeRadioTile('Dark', 'dark', themeProvider),
                     _buildThemeRadioTile('Guava Theme', 'guava', themeProvider),
-                    _buildThemeRadioTile('Pineapple Theme 🍍', 'pineapple', themeProvider),
+                    _buildThemeRadioTile('Pineapple Theme', 'pineapple', themeProvider),
                     _buildThemeRadioTile('Greyscale', 'greyscale', themeProvider),
-                    _buildThemeRadioTile('Grape Theme 🍇', 'grape', themeProvider),
-                    _buildThemeRadioTile('Peach Theme 🍑', 'peach', themeProvider),
+                    _buildThemeRadioTile('Grape Theme', 'grape', themeProvider),
+                    _buildThemeRadioTile('Peach Theme', 'peach', themeProvider),
                   ],
                 ),
               ),
+
               const SizedBox(height: 20),
 
-              // --- Font Section ---
               const Text('Font', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
-                elevation: 2,
                 child: Column(
                   children: ThemeProvider.fontMap.keys.map((fontName) {
                     return RadioListTile<String>(
@@ -119,22 +144,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   }).toList(),
                 ),
               ),
+
               const SizedBox(height: 20),
 
-
-              // --- NEW CUSTOM THEME SLIDER SECTION ---
               const Text('Custom Theme', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
-                elevation: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Sliders for RGB values
-                      _buildColorSlider('Red', Colors.red, _red, (value) => setState(() => _red = value)),
-                      _buildColorSlider('Green', Colors.green, _green, (value) => setState(() => _green = value)),
-                      _buildColorSlider('Blue', Colors.blue, _blue, (value) => setState(() => _blue = value)),
+                      _buildColorSlider('Red', Colors.red, _red, (v) => setState(() => _red = v)),
+                      _buildColorSlider('Green', Colors.green, _green, (v) => setState(() => _green = v)),
+                      _buildColorSlider('Blue', Colors.blue, _blue, (v) => setState(() => _blue = v)),
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -162,15 +184,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 20),
 
-              // --- Preferences Section ---
               const Text('Preferences', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
-                elevation: 2,
                 child: Column(
                   children: [
+
                     ListTile(
                       title: const Text('Analytics View'),
                       subtitle: Text(themeProvider.analyticsView == '7day' ? '7-day history' : '1-day history'),
@@ -181,6 +203,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                     ),
+
                     ListTile(
                       title: const Text('Show Completed Count'),
                       trailing: Switch(
@@ -190,6 +213,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                     ),
+
                     ListTile(
                       title: const Text('Animations'),
                       trailing: Switch(
@@ -199,35 +223,21 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
 
-              // --- Data & About Section ---
-              const Text('Data', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Card(
-                elevation: 2,
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: const Text('Reset All Data'),
-                      trailing: const Icon(Icons.delete_sweep, color: Colors.red),
-                      onTap: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Reset All Data?'),
-                            content: const Text('This action cannot be undone. Are you sure?'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Reset')),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          themeProvider.resetAllData();
+                    SwitchListTile(
+                      title: const Text("NetPulse (Internet Speed)"),
+                      subtitle: const Text("Show real-time speed in notification"),
+                      value: _netPulseEnabled,
+                      onChanged: (val) async {
+                        setState(() => _netPulseEnabled = val);
+
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('netpulse_enabled', val);
+
+                        if (val) {
+                          await _netService.start();
+                        } else {
+                          await _netService.stop();
                         }
                       },
                     ),
@@ -236,10 +246,37 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 20),
+
+              const Text('Data', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(
+                child: ListTile(
+                  title: const Text('Reset All Data'),
+                  trailing: const Icon(Icons.delete_sweep, color: Colors.red),
+                  onTap: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Reset All Data?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Reset')),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      themeProvider.resetAllData();
+                    }
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               const Text('About', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
-                elevation: 2,
                 child: ListTile(
                   title: const Text('Contact Details'),
                   trailing: const Icon(Icons.info_outline),
@@ -248,24 +285,25 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 40),
+
               Center(
                 child: Column(
                   children: [
-                    const Text('Created by Abhishek Ruhela in India with ❤️', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    const Text('🍉🍇', style: TextStyle(fontSize: 24)),
+                    const Text(
+                      'Created by Abhishek Ruhela in India',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.person_pin, color: Colors.blue),
-                          onPressed: () => _launchUrl('http://linkedin.com/in/abhishekruhela/'),
+                          onPressed: () => _launchUrl('https://linkedin.com/in/abhishekruhela'),
                         ),
-                        const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.code, color: Colors.black),
-                          onPressed: () => _launchUrl('http://github.com/mysterioxx'),
+                          onPressed: () => _launchUrl('https://github.com/bwnbits'),
                         ),
                       ],
                     ),
