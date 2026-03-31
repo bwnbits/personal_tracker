@@ -49,7 +49,7 @@ This guide will help you get the project up and running on your local machine.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/mysterioxx/personal_tracker.git](https://github.com/mysterioxx/personal_tracker.git)
+    git clone [git clone [https://github.com/bwnbits/personal_tracker.git](https://github.com/bwnbits/personal_tracker.git)
     ```
 2.  **Navigate to the project directory:**
     ```bash
