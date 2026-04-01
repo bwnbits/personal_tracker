@@ -11,12 +11,24 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+.env
+android/key.properties
+android/app/*.keystore
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+build/
+.gradle/
+.dart_tool/
+*.log
 # IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
+# Extra safety
+*.jks
+key.properties
+.env.*
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line

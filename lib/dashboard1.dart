@@ -1,5 +1,4 @@
 //immports for making HTTP requests, handling JSON data, and Flutter widgets.
-import 'package:personal_tracker/netpulse/netpulse_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui'; // Import this for ImageFilter
 import 'package:http/http.dart' as http;

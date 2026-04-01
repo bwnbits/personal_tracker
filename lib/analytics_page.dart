@@ -88,7 +88,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       pendingData[i] = 0;
     }
 
-    relevantTasks.forEach((task) {
+    for (var task in relevantTasks) {
       int index;
       if (_selectedTimeframe == '1day') {
         index = task.createdDate.hour;
@@ -101,7 +101,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       } else {
         pendingData[index] = (pendingData[index] ?? 0) + 1;
       }
-    });
+    }
 
     _chartDataCompleted = completedData.entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList();
     _chartDataPending = pendingData.entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList();
@@ -151,9 +151,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ],
           titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
+            leftTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: true, reservedSize: 30),
-              axisNameWidget: const Text('Task Count'),
+              axisNameWidget: Text('Task Count'),
               axisNameSize: 20,
             ),
             bottomTitles: AxisTitles(
@@ -200,7 +200,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 color: Colors.green,
                 strokeWidth: 0,
               ),
-            )).toList(),
+            )),
             ..._chartDataPending.map((spot) => ScatterSpot(
               spot.x,
               spot.y,
@@ -209,13 +209,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 color: Colors.red,
                 strokeWidth: 0,
               ),
-            )).toList(),
+            )),
           ],
           minX: 0, maxX: (_chartDataCompleted.length - 1).toDouble(), minY: 0, maxY: maxY,
           scatterTouchData: ScatterTouchData(enabled: true),
           borderData: FlBorderData(show: false),
           gridData: const FlGridData(show: false),
-          titlesData: FlTitlesData(show: false),
+          titlesData: const FlTitlesData(show: false),
         ),
       );
     }
@@ -226,7 +226,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (totalPoints <= 0) return ''; // Guard against empty data
 
     if (_selectedTimeframe == '1day') {
-      return '${index}:00';
+      return '$index:00';
     } else if (_selectedTimeframe == '7day') {
       // Ensure index is within bounds
       if (index < 0 || index >= totalPoints) return '';
